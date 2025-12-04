@@ -1,0 +1,202 @@
+:root {
+  color-scheme: light;
+  font-family: "Inter", "Manrope", system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+  background-color: #fdf9f5;
+  color: #5a4a42;
+  line-height: 1.5;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+.app-shell {
+  min-height: 100vh;
+  padding: 24px clamp(20px, 4vw, 40px) 72px;
+  max-width: 540px;
+  margin: 0 auto;
+}
+
+.hero {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.hero-illustration {
+  width: 96px;
+  height: 96px;
+}
+
+@media (max-width: 600px) {
+  .hero {
+    flex-direction: column;
+    text-align: center;
+  }
+}
+
+.eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 12px;
+  color: #8b6b56;
+}
+
+h1 {
+  margin: 8px 0;
+  font-size: clamp(28px, 6vw, 36px);
+  line-height: 1.1;
+}
+
+h2 {
+  margin: 4px 0 12px;
+  font-size: clamp(22px, 5vw, 28px);
+  line-height: 1.25;
+}
+
+.subtitle {
+  margin: 0;
+  font-size: 16px;
+  color: #766358;
+}
+
+.progress-card,
+.card {
+  background: #fff;
+  border-radius: 24px;
+  padding: 24px;
+  box-shadow: 0 18px 60px rgba(90, 74, 66, 0.12);
+}
+
+.progress-card {
+  margin-bottom: 20px;
+}
+
+.progress-label {
+  margin: 0;
+  font-size: 14px;
+  color: #8b6b56;
+}
+
+.progress-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+#progress-count {
+  font-size: 20px;
+}
+
+.progress-bar {
+  flex: 1;
+  height: 10px;
+  background: #f1e4da;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progress-bar span {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: linear-gradient(90deg, #8b6b56, #a98269);
+  border-radius: inherit;
+  transition: width 0.3s ease;
+}
+
+.reminder-copy {
+  margin: 12px 0 0;
+  font-size: 13px;
+  color: #766358;
+}
+
+.screen {
+  min-height: 320px;
+}
+
+.card p {
+  margin-top: 0;
+}
+
+.card p:last-child {
+  margin-bottom: 0;
+}
+
+.primary,
+.secondary {
+  width: 100%;
+  border: none;
+  border-radius: 16px;
+  padding: 16px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.primary {
+  background: #8b6b56;
+  color: #fff;
+  box-shadow: 0 12px 30px rgba(139, 107, 86, 0.3);
+}
+
+.secondary {
+  background: #f5ece4;
+  color: #5a4a42;
+}
+
+.primary:active,
+.secondary:active {
+  transform: translateY(2px);
+  box-shadow: none;
+}
+
+.day-card .checklist {
+  margin: 16px 0 24px;
+  padding: 16px;
+  border-radius: 16px;
+  background: #fdf4ec;
+}
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+}
+
+.checkbox input {
+  width: 20px;
+  height: 20px;
+  accent-color: #8b6b56;
+}
+
+.tip {
+  margin: 12px 0 0;
+  font-size: 15px;
+  color: #766358;
+}
+
+.day-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.day-actions button {
+  flex: 1;
+}
+
+.screen section + section {
+  margin-top: 16px;
+}
+

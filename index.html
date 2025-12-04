@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>7 дней без сахара</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Manrope:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+    <script defer src="./app.js"></script>
+  </head>
+  <body>
+    <div id="root" class="app-shell">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">Мини-челлендж от KobiArti</p>
+          <h1>7 дней без сахара в кофейне</h1>
+          <p class="subtitle">
+            Сохраняй энергию, тестируй напитки без сиропов и отмечай прогресс из
+            телефона.
+          </p>
+        </div>
+        <img src="./public/cup.svg" alt="coffee cup" class="hero-illustration" />
+      </header>
+
+      <section class="progress-card" aria-live="polite">
+        <p class="progress-label">Пройдено дней</p>
+        <div class="progress-row">
+          <strong id="progress-count">0 / 7</strong>
+          <div class="progress-bar">
+            <span id="progress-bar-fill"></span>
+          </div>
+        </div>
+        <p id="reminder-copy" class="reminder-copy"></p>
+      </section>
+
+      <main id="screen" class="screen"></main>
+    </div>
+
+    <template id="intro-screen">
+      <section class="card">
+        <p class="eyebrow">Привет!</p>
+        <h2>Я Арина, управляю кофейней и люблю эксперименты.</h2>
+        <p>
+          Тебя ждут 7 напитков без сахара: каждый насыщает вкусом, убирает тягу
+          к сиропам и не требует сложных ингредиентов. После каждого шага
+          отмечай “Сделано” — приложение запомнит прогресс и пришлёт напоминание.
+        </p>
+        <button class="primary" data-action="start">Начать 7 дней</button>
+        <button class="secondary" data-action="share">
+          Поделиться ссылкой
+        </button>
+      </section>
+    </template>
+
+    <template id="day-screen">
+      <section class="card day-card">
+        <p class="eyebrow" data-slot="day-number"></p>
+        <h2 data-slot="day-title"></h2>
+        <p data-slot="day-description"></p>
+        <div class="checklist">
+          <label class="checkbox">
+            <input type="checkbox" data-slot="day-checkbox" />
+            <span>Сегодняшний напиток готов</span>
+          </label>
+          <p class="tip" data-slot="day-tip"></p>
+        </div>
+        <div class="day-actions">
+          <button class="secondary" data-action="back">Назад</button>
+          <button class="primary" data-action="mark">✅ Сделано</button>
+        </div>
+      </section>
+    </template>
+
+    <template id="finish-screen">
+      <section class="card">
+        <p class="eyebrow">Поздравляю!</p>
+        <h2>Ты прошёл 7 дней без сахара</h2>
+        <p>
+          Хочешь получить 10 рецептов ЗОЖ-перекусов и разобраться, почему сахар
+          в кофе убивает энергию? Забирай расширенную версию — всего 399 ₽.
+        </p>
+        <button class="primary" data-action="buy">
+          Получить полную версию
+        </button>
+        <button class="secondary" data-action="restart">
+          Пройти ещё раз
+        </button>
+      </section>
+    </template>
+  </body>
+</html>
+
