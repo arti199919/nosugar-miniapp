@@ -52,12 +52,14 @@ const initialState = {
   screen: "intro",
   currentDayIndex: 0,
   completedDays: [],
+  failReasons: [],
   startedAt: null,
 };
 
 let state = loadState();
 const tg = window.Telegram?.WebApp ?? null;
 let mainButtonHandler = null;
+let currentDayCheckbox = null;
 const screenNode = document.getElementById("screen");
 
 /**
@@ -75,6 +77,7 @@ function loadState() {
       completedDays: Array.isArray(parsed.completedDays)
         ? parsed.completedDays
         : [],
+      failReasons: Array.isArray(parsed.failReasons) ? parsed.failReasons : [],
     };
   } catch (error) {
     console.warn("[MiniApp] Failed to read state:", error);
@@ -112,9 +115,38 @@ function markCurrentDayDone() {
   const idx = state.currentDayIndex;
   if (idx == null) return;
 
+  if (!currentDayCheckbox || !currentDayCheckbox.checked) {
+    const reason = prompt("Почему не получилось?");
+    const trimmed = reason?.trim();
+    if (!trimmed) {
+      const message =
+        "Нужно коротко описать причину, чтобы продолжить без отметки.";
+      if (tg?.showAlert) {
+        tg.showAlert(message);
+      } else {
+        alert(message);
+      }
+      return;
+    }
+    state.failReasons.push({
+      day: idx + 1,
+      reason: trimmed,
+      timestamp: Date.now(),
+    });
+    saveState();
+    const thanks = "Спасибо! Причину сохранили, попробуй снова, когда будешь готов.";
+    if (tg?.showAlert) {
+      tg.showAlert(thanks);
+    } else {
+      alert(thanks);
+    }
+    return;
+  }
+
   if (!state.completedDays.includes(idx)) {
     state.completedDays.push(idx);
   }
+  saveState();
 
   const next = getNextIncompleteDay();
   if (next == null) {
@@ -162,6 +194,7 @@ function attachActionHandlers(node) {
 }
 
 function renderIntroScreen() {
+  currentDayCheckbox = null;
   const template = document
     .getElementById("intro-screen")
     .content.cloneNode(true);
@@ -189,19 +222,19 @@ function renderDayScreen(index) {
 
   checkbox.checked = state.completedDays.includes(index);
   checkbox.addEventListener("change", () => {
-    if (checkbox.checked) {
-      markCurrentDayDone();
-    } else {
+    if (!checkbox.checked) {
       state.completedDays = state.completedDays.filter((i) => i !== index);
       saveState();
     }
   });
+  currentDayCheckbox = checkbox;
 
   screenNode.replaceChildren(template);
   attachActionHandlers(screenNode);
 }
 
 function renderFinishScreen() {
+  currentDayCheckbox = null;
   const template = document
     .getElementById("finish-screen")
     .content.cloneNode(true);

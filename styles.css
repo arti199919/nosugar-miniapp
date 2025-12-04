@@ -19,7 +19,9 @@ body {
 
 .app-shell {
   min-height: 100vh;
-  padding: 24px clamp(20px, 4vw, 40px) 72px;
+  padding: 56px clamp(20px, 4vw, 40px) 96px;
+  padding-top: calc(56px + env(safe-area-inset-top, 0px));
+  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
   max-width: 540px;
   margin: 0 auto;
 }
