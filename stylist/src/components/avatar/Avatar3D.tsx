@@ -8,6 +8,8 @@ import { buildBody, type BodyModel } from "./bodyModel";
 import { armFrame, armGeometry, ellipsoid, footLast, legGeometry, merge, sweepY, torsoSec } from "./geometry";
 import { buildOutfit, type MeshSpec } from "./garments";
 import { fabricTexture, materialFor } from "./textures";
+import { useFaceScan } from "../../db";
+import type { FaceScan } from "../../lib/faceScan";
 
 export interface AvatarHandle {
   snapshot: () => string | null;
@@ -82,7 +84,8 @@ function SnapshotBridge({ onReady }: { onReady: (fn: () => string | null) => voi
 
 function Body({ body, profile, items }: { body: BodyModel; profile: Profile; items: WardrobeItem[] }) {
   const outfit = useMemo(() => buildOutfit(body, items), [body, items]);
-  const skinGeo = useMemo(() => buildSkin(body, outfit.hideFeet), [body, outfit.hideFeet]);
+  const face = useFaceScan();
+  const skinGeo = useMemo(() => buildSkin(body, outfit.hideFeet, !!face), [body, outfit.hideFeet, face]);
   const hairGeo = useMemo(() => buildHair(body, profile, !!outfit.hatType), [body, profile, outfit.hatType]);
   const hands = useMemo(() => buildHands(body), [body]);
 
@@ -104,6 +107,7 @@ function Body({ body, profile, items }: { body: BodyModel; profile: Profile; ite
           <meshPhysicalMaterial color={profile.appearance.hairColor} roughness={0.5} sheen={0.8} sheenColor={shade(profile.appearance.hairColor, 0.4)} side={THREE.DoubleSide} />
         </mesh>
       )}
+      {face && <FaceMesh scan={face} body={body} />}
       {outfit.meshes.map((m) => (
         <GarmentMesh key={m.key} spec={m} />
       ))}
@@ -146,7 +150,46 @@ function metalColor(hex?: string) {
   return r > b + 25 && g > b ? "#d9b56a" : "#cfd3d8";
 }
 
-function buildSkin(body: BodyModel, hideFeet: boolean): THREE.BufferGeometry {
+/** Лицо из селфи: сетка MediaPipe с фото-текстурой, края растворяются в тон кожи. */
+function FaceMesh({ scan, body }: { scan: FaceScan; body: BodyModel }) {
+  const geo = useMemo(() => faceGeometry(scan, body), [scan, body]);
+  const tex = useMemo(() => {
+    const t = new THREE.TextureLoader().load(scan.texture);
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.anisotropy = 4;
+    return t;
+  }, [scan.texture]);
+  useEffect(() => () => (geo.dispose(), tex.dispose()), [geo, tex]);
+  return (
+    <mesh geometry={geo} castShadow>
+      <meshStandardMaterial map={tex} emissiveMap={tex} emissive="#ffffff" emissiveIntensity={0.28} roughness={0.62} vertexColors transparent side={THREE.DoubleSide} />
+    </mesh>
+  );
+}
+
+export function faceGeometry(scan: FaceScan, body: BodyModel): THREE.BufferGeometry {
+  const h = body.head;
+  const S = body.H * 0.087; // ширина лица у ушей ≈ 14–15 см при росте 168
+  const chinY = scan.points[152 * 3 + 1];
+  const y0 = h.cy - h.ry * 0.97 - chinY * S; // подбородок — к низу головы
+  const pos: number[] = [];
+  for (let i = 0; i < scan.points.length; i += 3) {
+    pos.push(scan.points[i] * S, y0 + scan.points[i + 1] * S, h.rz * FACE_Z + scan.points[i + 2] * S * 0.9);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute("uv", new THREE.Float32BufferAttribute(scan.uvs, 2));
+  const col: number[] = [];
+  for (const a of scan.alpha) col.push(1, 1, 1, a);
+  g.setAttribute("color", new THREE.Float32BufferAttribute(col, 4));
+  g.setIndex(scan.indices);
+  g.computeVertexNormals();
+  return g;
+}
+
+const FACE_Z = 0.22;
+
+function buildSkin(body: BodyModel, hideFeet: boolean, hasFace = false): THREE.BufferGeometry {
   const L = body.levels;
   const parts: THREE.BufferGeometry[] = [];
   parts.push(sweepY(L.crotch - 0.012, L.neckBase, 64, torsoSec(body, 0)));
@@ -165,13 +208,19 @@ function buildSkin(body: BodyModel, hideFeet: boolean): THREE.BufferGeometry {
     parts.push(ellipsoid(r, r, r, [start.x, start.y + 0.005, start.z], 20, Math.PI));
   }
   // шея и голова
-  const neck = new THREE.CylinderGeometry(body.neck.r * 1.04, body.neck.r * 1.12, body.neck.y1 - body.neck.y0, 24, 1, true);
-  neck.translate(0, (body.neck.y0 + body.neck.y1) / 2, -0.005);
+  const neckTop = hasFace ? body.head.cy : body.neck.y1;
+  const neck = new THREE.CylinderGeometry(body.neck.r * 1.04, body.neck.r * 1.12, neckTop - body.neck.y0, 24, 1, true);
+  neck.translate(0, (body.neck.y0 + neckTop) / 2, -0.005);
   parts.push(neck);
   const h = body.head;
-  parts.push(ellipsoid(h.rx, h.ry, h.rz, [0, h.cy, 0], 40, Math.PI));
-  // нос — лёгкий намёк на лицо манекена
-  parts.push(ellipsoid(h.rx * 0.11, h.ry * 0.13, h.rz * 0.12, [0, h.cy - h.ry * 0.1, h.rz * 0.95], 12, Math.PI));
+  if (hasFace) {
+    // голова чуть «сплющена» спереди, чтобы на ней лежало отсканированное лицо
+    parts.push(ellipsoid(h.rx * 0.97, h.ry, h.rz * 0.8, [0, h.cy, -h.rz * 0.06], 40, Math.PI));
+  } else {
+    parts.push(ellipsoid(h.rx, h.ry, h.rz, [0, h.cy, 0], 40, Math.PI));
+    // нос — лёгкий намёк на лицо манекена
+    parts.push(ellipsoid(h.rx * 0.11, h.ry * 0.13, h.rz * 0.12, [0, h.cy - h.ry * 0.1, h.rz * 0.95], 12, Math.PI));
+  }
   return merge(parts);
 }
 

@@ -144,6 +144,28 @@ export interface Profile {
   };
   home?: Place;
   work?: Place;
+  palette?: ColorPalette;
+}
+
+export interface NamedColor {
+  name: string;
+  hex: string;
+}
+
+/** Результат анализа цветотипа. */
+export interface ColorPalette {
+  season: "spring" | "summer" | "autumn" | "winter";
+  subtype: string; // например «мягкое лето»
+  undertone: "warm" | "cool" | "neutral";
+  contrast: "low" | "medium" | "high";
+  best: NamedColor[];
+  neutrals: NamedColor[];
+  avoid: NamedColor[];
+  metals: string;
+  makeup: string[];
+  hair: string[];
+  summary: string;
+  source: "ai" | "local";
 }
 
 export interface Look {
@@ -252,6 +274,7 @@ export interface CalendarEvent {
   notes?: string;
   planId?: string;
   lookId?: string;
+  externalId?: string; // UID из подписанного календаря (Apple/iCloud)
   createdAt: number;
 }
 

@@ -8,7 +8,8 @@ import type { CalendarEvent, EventType, Place, Transport } from "@shared/types";
 import { PlanView } from "../components/PlanView";
 import { PlacePicker } from "../components/PlacePicker";
 import { WeatherCard } from "../components/items";
-import { Field, PageHeader, Spinner } from "../components/ui";
+import { Field, PageHeader, Segmented, Spinner } from "../components/ui";
+import { ReferencePanel } from "../components/ReferencePanel";
 import { db, useItems, useProfile } from "../db";
 import { addDays, formatDay, relativeDay, todayISO, tomorrowISO } from "../lib/dates";
 import { useWeather } from "../lib/hooks";
@@ -36,6 +37,7 @@ export default function Stylist() {
     [planId, date],
   );
   const { weather, loading: wxLoading, error: wxError } = useWeather(date, to);
+  const [mode, setMode] = useState<"day" | "reference">("day");
 
   // подставить параметры события
   useEffect(() => {
@@ -80,7 +82,24 @@ export default function Stylist() {
   if (!profile || !items) return null;
   return (
     <div>
-      <PageHeader title="Стилист" subtitle="Расскажите, какой день впереди — соберу образ с учётом погоды, дороги, дресс-кода и трендов." />
+      <PageHeader
+        title="Стилист"
+        subtitle="Расскажите, какой день впереди — соберу образ с учётом погоды, дороги, дресс-кода и трендов."
+        actions={
+          <Segmented
+            value={mode}
+            onChange={setMode}
+            options={[
+              { value: "day", label: "Образ на день" },
+              { value: "reference", label: "Как на фото" },
+            ]}
+          />
+        }
+      />
+      {mode === "reference" ? (
+        <ReferencePanel />
+      ) : (
+      <>
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="card space-y-5 p-5">
           <div>
@@ -178,6 +197,8 @@ export default function Stylist() {
           <h2 className="mb-4 font-display text-3xl font-semibold">Образы на {formatDay(plan.date, { day: "numeric", month: "long" })}</h2>
           <PlanView plan={plan} items={items} />
         </div>
+      )}
+      </>
       )}
     </div>
   );

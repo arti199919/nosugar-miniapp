@@ -13,6 +13,7 @@ import type {
   ItemBrief,
   BeautyAdvice,
   WardrobeItem,
+  ColorPalette,
 } from "@shared/types";
 
 export class ApiError extends Error {
@@ -76,6 +77,13 @@ export interface PlanResult {
   gaps: string[];
 }
 
+export interface ReferenceResult {
+  description: string;
+  pieces: { piece: string; category: WardrobeItem["category"]; matchId: string; matchQuality: "exact" | "close" | "substitute" | "none"; comment: string; shopQuery: string }[];
+  tips: string[];
+  score: number;
+}
+
 export const api = {
   health: () => req<Health>("/api/health"),
   weather: (lat: number, lon: number) => req<WeatherDay[]>(`/api/weather?lat=${lat}&lon=${lon}`),
@@ -94,6 +102,13 @@ export const api = {
   capsule: (body: { goal: string; profile: Profile; items: ItemBrief[]; trends?: string }) =>
     req<CapsuleReport>("/api/ai/capsule", { json: body }),
   shop: (body: { query: string; profile: Profile; budget?: string; useAi?: boolean }) => req<ShopResult>("/api/shop/search", { json: body }),
+  colorType: (image: string, measured?: { skin: string; hair: string; eyes: string }) => req<ColorPalette>("/api/ai/colortype", { json: { image, measured } }),
+  reference: (body: { image: string; profile: Profile; items: ItemBrief[] }) => req<ReferenceResult>("/api/ai/reference", { json: body }),
+  ics: async (url: string) => {
+    const res = await fetch(`/api/ics?url=${encodeURIComponent(url)}`);
+    if (!res.ok) throw new ApiError((await res.json().catch(() => ({}))).error ?? `Ошибка ${res.status}`, res.status);
+    return res.text();
+  },
   importUrl: (url: string) =>
     req<{ name: string; imageUrl?: string; price?: string; brand?: string; description?: string }>("/api/ai/import-url", { json: { url } }),
 };

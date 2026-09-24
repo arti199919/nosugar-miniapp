@@ -4,6 +4,7 @@ import { Layout } from "./components/Layout";
 import { Spinner, Toasts } from "./components/ui";
 import { useUI } from "./store";
 import { startReminders } from "./lib/reminders";
+import { autoSyncCalendar } from "./lib/calendarSync";
 
 const Home = lazy(() => import("./pages/Home"));
 const Stylist = lazy(() => import("./pages/Stylist"));
@@ -15,11 +16,13 @@ const Mirror = lazy(() => import("./pages/Mirror"));
 const Shop = lazy(() => import("./pages/Shop"));
 const Chat = lazy(() => import("./pages/Chat"));
 const Profile = lazy(() => import("./pages/Profile"));
+const AvatarPage = lazy(() => import("./pages/Avatar"));
 
 export function App() {
   const checkHealth = useUI((s) => s.checkHealth);
   useEffect(() => {
     checkHealth();
+    autoSyncCalendar();
     const t = startReminders();
     return () => clearInterval(t);
   }, [checkHealth]);
@@ -44,6 +47,7 @@ export function App() {
           <Route path="/shop" element={<Shop />} />
           <Route path="/chat" element={<Chat />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/avatar" element={<AvatarPage />} />
           <Route path="*" element={<Home />} />
         </Routes>
       </Suspense>

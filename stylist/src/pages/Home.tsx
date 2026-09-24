@@ -91,13 +91,13 @@ export default function Home() {
       </div>
 
       {!onboarded && (
-        <Link to="/profile" className="card flex items-center gap-4 border-accent/40 bg-accent/10 p-5">
+        <Link to="/avatar" className="card flex items-center gap-4 border-accent/40 bg-accent/10 p-5">
           <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-surface text-accent">
             <UserRound />
           </span>
           <span className="flex-1">
-            <span className="block font-bold">Начните с профиля</span>
-            <span className="text-sm text-muted">Рост, мерки, город и предпочтения — из них соберётся ваш 3D-аватар, а стилист будет учитывать погоду и дорогу.</span>
+            <span className="block font-bold">Создайте свой аватар</span>
+            <span className="text-sm text-muted">Селфи и два фото в полный рост — и аватар получит ваше лицо, мерки и цветотип. Потом укажите город в профиле для погоды и дороги.</span>
           </span>
           <ArrowRight className="text-accent" />
         </Link>

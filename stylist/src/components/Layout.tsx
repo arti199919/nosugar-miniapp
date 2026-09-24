@@ -8,6 +8,7 @@ import {
   Menu,
   MessageCircle,
   Moon,
+  ScanFace,
   PersonStanding,
   Shirt,
   ShoppingBag,
@@ -24,6 +25,7 @@ const NAV = [
   { to: "/stylist", label: "Стилист", icon: Sparkles },
   { to: "/wardrobe", label: "Гардероб", icon: Shirt },
   { to: "/fitting", label: "Примерочная", icon: PersonStanding },
+  { to: "/avatar", label: "Мой аватар", icon: ScanFace },
   { to: "/looks", label: "Образы", icon: Bookmark },
   { to: "/calendar", label: "Календарь", icon: CalendarDays },
   { to: "/mirror", label: "Зеркало", icon: Camera },
@@ -70,7 +72,7 @@ export function Layout({ children }: { children: ReactNode }) {
       </aside>
 
       {/* Mobile top bar */}
-      <header className="glass sticky top-0 z-30 flex items-center justify-between px-4 py-3 lg:hidden">
+      <header className="glass sticky top-0 z-30 flex items-center justify-between px-4 pb-3 lg:hidden" style={{ paddingTop: "max(0.75rem, env(safe-area-inset-top))" }}>
         <Brand compact />
         <div className="flex items-center gap-2">
           <span className={clsx("h-2 w-2 rounded-full", health?.ai ? "bg-ok" : "bg-warn")} title={health?.ai ? "ИИ подключён" : "ИИ не подключён"} />

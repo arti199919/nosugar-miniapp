@@ -68,6 +68,9 @@ export function describeProfile(p: Profile): string {
     `Внешность: подтон кожи ${p.appearance.undertone}, волосы ${p.appearance.hairLength}/${p.appearance.hairType}${p.appearance.colorType ? `, цветотип ${p.appearance.colorType}` : ""}.`,
     `Стиль: любит ${p.style.preferred.join(", ") || "—"}; избегает ${p.style.avoid.join(", ") || "—"}; любимые цвета ${p.style.favoriteColors.join(", ") || "—"}; нелюбимые ${p.style.avoidColors.join(", ") || "—"}; бюджет ${p.style.budget}. ${p.style.notes}`,
     `Комфорт: каблук не выше ${p.comfort.maxHeelCm} см, на каблуке пешком не больше ${p.comfort.maxWalkKmInHeels} км${p.comfort.coldSensitive ? ", мерзлява(ый)" : ""}.`,
+    p.palette
+      ? `Цветотип: ${p.palette.subtype} (подтон ${p.palette.undertone}, контраст ${p.palette.contrast}). Лучшие цвета у лица: ${p.palette.best.map((c) => c.name).join(", ")}; избегать у лица: ${p.palette.avoid.map((c) => c.name).join(", ")}; металлы: ${p.palette.metals}.`
+      : "",
     p.home ? `Город/дом: ${p.home.label}.` : "",
   ]
     .filter(Boolean)
@@ -465,4 +468,69 @@ export async function chatStream(input: {
   } catch (e) {
     throw describeApiError(e);
   }
+}
+
+// ---------- 10. Цветотип по селфи ----------
+
+const NamedColorSchema = z.object({ name: z.string(), hex: z.string() });
+const ColorTypeSchema = z.object({
+  season: z.enum(["spring", "summer", "autumn", "winter"]),
+  subtype: z.string().describe("Подтип по 12-сезонной системе по-русски, например «мягкое лето», «глубокая осень»"),
+  undertone: z.enum(["warm", "cool", "neutral"]),
+  contrast: z.enum(["low", "medium", "high"]),
+  best: z.array(NamedColorSchema).describe("8–10 лучших цветов одежды у лица"),
+  neutrals: z.array(NamedColorSchema).describe("4–5 базовых нейтральных"),
+  avoid: z.array(NamedColorSchema).describe("4–5 цветов, которые лучше не носить у лица"),
+  metals: z.string(),
+  makeup: z.array(z.string()).describe("Тон, румяна, губы, глаза — конкретные оттенки"),
+  hair: z.array(z.string()).describe("Какие оттенки окрашивания пойдут"),
+  summary: z.string().describe("2–3 предложения: почему этот цветотип, на что обратить внимание"),
+});
+
+export async function colorType(input: { image: string; measured?: { skin: string; hair: string; eyes: string } }) {
+  const res = await structured({
+    schema: ColorTypeSchema,
+    effort: "medium",
+    maxTokens: 8000,
+    system:
+      "Ты колорист-стилист. Определи цветотип человека по селфи (12-сезонная система): подтон кожи, контраст волосы/кожа/глаза, насыщенность и светлоту. Учитывай, что освещение и баланс белого на фото искажают цвета — делай поправку и скажи об этом, если фото тёплое/холодное. Цвета в HEX.",
+    content: [
+      imageBlock(input.image),
+      {
+        type: "text",
+        text: `Определи цветотип.${input.measured ? ` Замеренные по фото цвета (могут быть искажены светом): кожа ${input.measured.skin}, волосы ${input.measured.hair}, глаза ${input.measured.eyes}.` : ""}`,
+      },
+    ],
+  });
+  return { ...res, source: "ai" as const };
+}
+
+// ---------- 11. Образ по фото-референсу из своих вещей ----------
+
+const ReferenceSchema = z.object({
+  description: z.string().describe("Что за образ на референсе: стиль, силуэт, палитра — 2 предложения"),
+  pieces: z.array(
+    z.object({
+      piece: z.string().describe("Вещь на референсе"),
+      category: z.enum(CATEGORY_ORDER as [string, ...string[]]),
+      matchId: z.string().describe("id подходящей вещи из гардероба или пустая строка, если подходящей нет"),
+      matchQuality: z.enum(["exact", "close", "substitute", "none"]),
+      comment: z.string(),
+      shopQuery: z.string().describe("Поисковый запрос для маркетплейса, если вещи нет или замена слабая, иначе пустая строка"),
+    }),
+  ),
+  tips: z.array(z.string()).describe("Как повторить стайлинг: заправить, подвернуть, пропорции, аксессуары"),
+  score: z.number().describe("Насколько получилось повторить референс из своих вещей, 0–100"),
+});
+
+export async function outfitFromReference(input: { image: string; profile: Profile; items: ItemBrief[] }) {
+  const res = await structured({
+    schema: ReferenceSchema,
+    effort: "medium",
+    system: `${STYLIST_PERSONA}\n\n${describeProfile(input.profile)}\n\nКлиент прислал фото-референс образа. Разбери его на вещи и собери максимально похожий образ из гардероба клиента, учитывая его фигуру. Используй только id из списка.`,
+    content: [imageBlock(input.image), { type: "text", text: `Гардероб:\n${wardrobeText(input.items)}` }],
+  });
+  const ids = new Set(input.items.map((i) => i.id));
+  res.pieces = res.pieces.map((p) => (p.matchId && !ids.has(p.matchId) ? { ...p, matchId: "", matchQuality: "none" as const } : p));
+  return res;
 }

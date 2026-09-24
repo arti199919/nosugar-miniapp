@@ -2,6 +2,7 @@
 import { CATEGORIES, EVENT_TYPES, TRANSPORTS, isRainCode, isSnowCode, seasonOf, slotOf } from "./catalog";
 import type { Slot } from "./catalog";
 import { harmonyScore, colorName, isNeutral } from "./color";
+import { paletteFit } from "./colorType";
 import type {
   BeautyAdvice,
   CalendarEvent,
@@ -125,6 +126,8 @@ function itemScore(i: WardrobeItem, c: Conditions, date: string, profile: Profil
   const fav = profile.style.favoriteColors.map((x) => x.toLowerCase());
   if (i.colors.some((h) => fav.includes(colorName(h)))) s += 0.08;
   if (profile.style.preferred.length && i.styles.some((st) => profile.style.preferred.includes(st))) s += 0.1;
+  // цвета, которые находятся у лица, сверяем с палитрой цветотипа
+  if (["top", "mid", "onepiece", "scarf", "blazer", "outer"].includes(slotOf(i.category))) s += paletteFit(i.colors[0], profile.palette) * 0.12;
   return s;
 }
 

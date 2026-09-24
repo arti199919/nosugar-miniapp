@@ -1,14 +1,16 @@
 import { useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import clsx from "clsx";
-import { Bell, ChevronLeft, ChevronRight, Download, Pencil, Plus, Sparkles, Trash2, Upload } from "lucide-react";
+import { Apple, Bell, CalendarPlus, ChevronLeft, ChevronRight, Download, Pencil, Plus, RefreshCw, Sparkles, Trash2, Upload } from "lucide-react";
+import { useLiveQuery } from "dexie-react-hooks";
 import { EVENT_TYPES, TRANSPORTS } from "@shared/catalog";
 import type { CalendarEvent, EventType, Transport } from "@shared/types";
 import { PlacePicker } from "../components/PlacePicker";
 import { Field, Modal, PageHeader, Spinner } from "../components/ui";
-import { db, uid, useEvents, useItems, useProfile } from "../db";
+import { db, getKV, uid, useEvents, useItems, useProfile } from "../db";
 import { addDays, daysBetween, formatDay, iso, relativeDay, todayISO } from "../lib/dates";
-import { guessType, parseIcs, toIcs } from "../lib/ics";
+import { downloadIcs, guessType, parseIcs } from "../lib/ics";
+import { syncCalendar } from "../lib/calendarSync";
 import { makePlan } from "../lib/planner";
 import { errorText, toast } from "../store";
 
@@ -23,6 +25,7 @@ export default function Calendar() {
   const [selected, setSelected] = useState(todayISO());
   const [editing, setEditing] = useState<CalendarEvent | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [appleOpen, setAppleOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const grid = useMemo(() => {
@@ -88,15 +91,10 @@ export default function Calendar() {
             <button className="btn-ghost" onClick={() => fileRef.current?.click()} title="Импорт .ics из Google/Яндекс/Apple календаря">
               <Upload size={16} /> .ics
             </button>
-            <button
-              className="btn-ghost"
-              onClick={() => {
-                const a = document.createElement("a");
-                a.href = URL.createObjectURL(new Blob([toIcs(events ?? [])], { type: "text/calendar" }));
-                a.download = "atelier.ics";
-                a.click();
-              }}
-            >
+            <button className="btn-ghost" onClick={() => setAppleOpen(true)}>
+              <Apple size={16} /> Apple Календарь
+            </button>
+            <button className="btn-ghost" title="Экспорт всех событий в .ics" onClick={() => downloadIcs(events ?? [])}>
               <Download size={16} />
             </button>
             <button
@@ -128,7 +126,8 @@ export default function Calendar() {
           const f = e.target.files?.[0];
           e.target.value = "";
           if (!f) return;
-          const list = parseIcs(await f.text()).filter((x) => x.date >= addDays(todayISO(), -1));
+          const known = new Set((events ?? []).map((x) => x.externalId).filter(Boolean));
+          const list = parseIcs(await f.text(), { from: addDays(todayISO(), -1), to: addDays(todayISO(), 120) }).filter((x) => !known.has(x.externalId));
           await db.events.bulkAdd(list);
           toast(`Импортировано событий: ${list.length}`, "ok");
         }}
@@ -213,9 +212,16 @@ export default function Calendar() {
                       <Pencil size={14} />
                     </button>
                   </div>
-                  <button className={clsx("mt-3 w-full", e.planId ? "btn-ghost" : "btn-primary")} onClick={() => nav("/stylist", { state: { date: e.date, eventId: e.id } })}>
-                    <Sparkles size={15} /> {e.planId ? "Открыть подготовленный образ" : "Подготовить образ"}
-                  </button>
+                  <div className="mt-3 flex gap-2">
+                    <button className={clsx("flex-1", e.planId ? "btn-ghost" : "btn-primary")} onClick={() => nav("/stylist", { state: { date: e.date, eventId: e.id } })}>
+                      <Sparkles size={15} /> {e.planId ? "Открыть подготовленный образ" : "Подготовить образ"}
+                    </button>
+                    {!e.externalId && (
+                      <button className="btn-icon h-auto w-11" title="Добавить в Apple Календарь" onClick={() => downloadIcs([e], `${e.title || "событие"}.ics`)}>
+                        <CalendarPlus size={16} />
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -224,6 +230,7 @@ export default function Calendar() {
       </div>
 
       <EventModal event={editing} onClose={() => setEditing(null)} />
+      <AppleModal open={appleOpen} onClose={() => setAppleOpen(false)} />
     </div>
   );
 }
@@ -326,6 +333,78 @@ function EventModal({ event, onClose }: { event: CalendarEvent | null; onClose: 
           <textarea className="input min-h-16" value={e.notes ?? ""} onChange={(ev) => set("notes", ev.target.value || undefined)} placeholder="Будут фотографии, мероприятие на террасе…" />
         </Field>
       </div>
+    </Modal>
+  );
+}
+
+function AppleModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const sub = useLiveQuery(() => getKV<{ url: string; lastSync?: number; lastCount?: number; error?: string } | null>("icsSub", null), []);
+  const [url, setUrl] = useState("");
+  const [busy, setBusy] = useState(false);
+  const connect = async (u: string) => {
+    setBusy(true);
+    try {
+      const r = await syncCalendar(u.trim());
+      toast(`Синхронизировано: +${r.added}, изменено ${r.updated}, удалено ${r.removed}`, "ok");
+      setUrl("");
+    } catch (e) {
+      toast(errorText(e), "error");
+    }
+    setBusy(false);
+  };
+  return (
+    <Modal open={open} onClose={onClose} title="Apple Календарь">
+      {sub?.url ? (
+        <div className="space-y-3">
+          <div className="rounded-2xl bg-surface-2 p-3 text-sm">
+            <div className="font-semibold">Подключено</div>
+            <div className="truncate text-xs text-muted">{sub.url}</div>
+            <div className="mt-1 text-xs text-muted">
+              {sub.lastSync ? `Последняя синхронизация: ${new Date(sub.lastSync).toLocaleString("ru-RU")}, событий: ${sub.lastCount ?? 0}` : "Ещё не синхронизировано"}
+            </div>
+            {sub.error && <div className="mt-1 text-xs text-bad">{sub.error}</div>}
+          </div>
+          <p className="text-xs text-muted">События подтягиваются при каждом открытии приложения (не чаще раза в 30 минут). Тип события, дресс-код и транспорт, которые вы укажете здесь, сохраняются.</p>
+          <div className="flex gap-2">
+            <button className="btn-primary flex-1" onClick={() => connect(sub.url)} disabled={busy}>
+              {busy ? <Spinner /> : <RefreshCw size={16} />} Синхронизировать
+            </button>
+            <button
+              className="btn-ghost text-bad"
+              onClick={async () => {
+                if (!confirm("Отключить календарь и удалить импортированные из него события?")) return;
+                const ids = (await db.events.toArray()).filter((e) => e.externalId).map((e) => e.id);
+                await db.events.bulkDelete(ids);
+                await db.kv.delete("icsSub");
+              }}
+            >
+              <Trash2 size={16} />
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-4 text-sm">
+          <p>Подключите календарь iCloud по ссылке — стилист будет видеть ваши встречи и готовить образы заранее.</p>
+          <div className="rounded-2xl bg-surface-2 p-3">
+            <div className="mb-1 font-bold">На iPhone</div>
+            <ol className="list-decimal space-y-1 pl-5 text-muted">
+              <li>Откройте «Календарь» → внизу «Календари».</li>
+              <li>Нажмите ⓘ рядом с нужным календарём.</li>
+              <li>Включите «Общий календарь» (Public Calendar) → «Поделиться ссылкой…» → «Скопировать».</li>
+            </ol>
+            <div className="mt-2 mb-1 font-bold">На Mac</div>
+            <p className="text-muted">Календарь → правый клик по календарю → «Общий доступ» → «Общий календарь» → скопируйте ссылку webcal://…</p>
+          </div>
+          <p className="text-xs text-warn">Публичная ссылка открывает календарь всем, у кого она есть. Лучше завести отдельный календарь «Мероприятия» и подключить только его.</p>
+          <Field label="Ссылка на календарь">
+            <input className="input" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="webcal://p123-caldav.icloud.com/published/2/…" />
+          </Field>
+          <button className="btn-primary w-full" disabled={!/^(webcal|https):\/\//i.test(url.trim()) || busy} onClick={() => connect(url)}>
+            {busy ? <Spinner /> : <Apple size={16} />} Подключить
+          </button>
+          <p className="text-xs text-muted">Добавить событие отсюда в Apple Календарь можно кнопкой с календариком у события — откроется системный диалог.</p>
+        </div>
+      )}
     </Modal>
   );
 }

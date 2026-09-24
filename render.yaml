@@ -1,0 +1,17 @@
+# Render Blueprint: https://render.com → New → Blueprint → выбрать этот репозиторий
+services:
+  - type: web
+    name: atelier-stylist
+    runtime: node
+    plan: free
+    rootDir: stylist
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: STYLIST_MODEL
+        value: claude-opus-5

@@ -4,16 +4,18 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "concurrently -k -n web,api -c magenta,cyan \"vite\" \"tsx watch server/index.ts\"",
+    "dev": "node scripts/copy-mediapipe.mjs && concurrently -k -n web,api -c magenta,cyan \"vite\" \"tsx watch server/index.ts\"",
     "dev:web": "vite",
     "dev:api": "tsx watch server/index.ts",
-    "build": "tsc --noEmit && vite build",
+    "build": "node scripts/copy-mediapipe.mjs && tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
     "start": "NODE_ENV=production tsx server/index.ts",
-    "test": "vitest run"
+    "test": "vitest run",
+    "postinstall": "node scripts/copy-mediapipe.mjs"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",
+    "@types/delaunator": "^5.0.3",
     "@types/express": "^5.0.6",
     "@types/node": "^26.6.2",
     "@types/react": "^19.3.0",
@@ -22,7 +24,6 @@
     "@vitejs/plugin-react": "^6.1.1",
     "concurrently": "^10.0.5",
     "tailwindcss": "^4.3.3",
-    "tsx": "^4.23.15",
     "typescript": "^7.0.2",
     "vite": "^8.3.0",
     "vitest": "^5.0.1"
@@ -31,9 +32,11 @@
     "@anthropic-ai/sdk": "^0.128.0",
     "@huggingface/transformers": "^4.3.0",
     "@imgly/background-removal": "^1.7.0",
+    "@mediapipe/tasks-vision": "^1.0.1",
     "@react-three/drei": "^10.7.8",
     "@react-three/fiber": "^9.8.0",
     "clsx": "^2.1.1",
+    "delaunator": "^5.1.0",
     "dexie": "^4.4.6",
     "dexie-react-hooks": "^4.4.0",
     "dotenv": "^18.0.3",
@@ -43,7 +46,11 @@
     "react-dom": "^19.3.0",
     "react-router-dom": "^7.18.4",
     "three": "^0.186.0",
+    "tsx": "^4.23.15",
     "zod": "^4.6.5",
     "zustand": "^5.0.15"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }

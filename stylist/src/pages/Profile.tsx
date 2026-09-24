@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
-import { Download, RefreshCw, Save, Trash2, Upload } from "lucide-react";
+import { Download, RefreshCw, Save, ScanFace, Trash2, Upload } from "lucide-react";
+import { Link } from "react-router-dom";
 import { STYLE_TAGS } from "@shared/catalog";
 import { bmi, bodyShape, defaultProfile, ruSize } from "@shared/body";
 import type { BodyMeasurements, Profile as P } from "@shared/types";
@@ -91,6 +92,16 @@ export default function Profile() {
             </div>
           </section>
 
+          <Link to="/avatar" className="card flex items-center gap-4 border-accent/40 bg-accent/10 p-5">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-surface text-accent">
+              <ScanFace />
+            </span>
+            <span className="flex-1">
+              <span className="block font-bold">Снять мерки и лицо по фото</span>
+              <span className="text-sm text-muted">Селфи → ваше лицо на аватаре и цветотип. Два фото в полный рост → мерки автоматически.</span>
+            </span>
+          </Link>
+
           <section className="card p-5">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
               <h2 className="text-lg font-bold">Мерки, см</h2>
@@ -171,7 +182,7 @@ export default function Profile() {
                   <option value="curly">Кудрявые</option>
                 </select>
               </Field>
-              <Field label="Цветотип">
+              <Field label={p.palette ? `Цветотип: ${p.palette.subtype}` : "Цветотип"}>
                 <select className="input" value={p.appearance.colorType ?? ""} onChange={(e) => setP({ ...p, appearance: { ...p.appearance, colorType: (e.target.value || undefined) as P["appearance"]["colorType"] } })}>
                   <option value="">Не знаю</option>
                   <option value="spring">Весна</option>

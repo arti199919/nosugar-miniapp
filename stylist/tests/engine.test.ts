@@ -141,3 +141,33 @@ describe("extractJson", () => {
     expect(extractJson<{ b: string }>('Итог {"b": "x"} конец')).toEqual({ b: "x" });
   });
 });
+
+import { expandRRule, parseIcs } from "../src/lib/ics";
+
+describe("ics", () => {
+  it("разворачивает еженедельное повторение по будням", () => {
+    const d = expandRRule("2026-09-21", "FREQ=WEEKLY;BYDAY=MO,WE,FR", "2026-09-21", "2026-10-04", new Set());
+    expect(d).toEqual(["2026-09-21", "2026-09-23", "2026-09-25", "2026-09-28", "2026-09-30", "2026-10-02"]);
+  });
+  it("учитывает COUNT и EXDATE", () => {
+    expect(expandRRule("2026-09-21", "FREQ=DAILY;COUNT=3", "2026-01-01", "2026-12-31", new Set(["2026-09-22"]))).toEqual(["2026-09-21", "2026-09-23"]);
+  });
+  it("парсит событие iCloud с TZID и повторением", () => {
+    const ics = [
+      "BEGIN:VCALENDAR",
+      "BEGIN:VEVENT",
+      "UID:abc",
+      "DTSTART;TZID=Europe/Moscow:20260922T190000",
+      "DTEND;TZID=Europe/Moscow:20260922T210000",
+      "RRULE:FREQ=WEEKLY;COUNT=2",
+      "SUMMARY:Ужин в ресторане",
+      "END:VEVENT",
+      "END:VCALENDAR",
+    ].join("\r\n");
+    const ev = parseIcs(ics, { from: "2026-09-01", to: "2026-12-31" });
+    expect(ev.map((e) => e.date)).toEqual(["2026-09-22", "2026-09-29"]);
+    expect(ev[0].start).toBe("19:00");
+    expect(ev[0].type).toBe("restaurant");
+    expect(ev[0].externalId).toBe("abc#2026-09-22");
+  });
+});
