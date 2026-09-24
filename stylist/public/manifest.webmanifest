@@ -1,0 +1,9 @@
+{
+  "name": "Atelier — ИИ-стилист",
+  "short_name": "Atelier",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f0d12",
+  "theme_color": "#0f0d12",
+  "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}
